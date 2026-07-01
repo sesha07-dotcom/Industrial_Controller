@@ -4,11 +4,26 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
-#include <Update.h>
+#include <esp_https_ota.h>
 
 const char* ssid = "RTUniverse";
 const char* password = "8754820702";
+const char* VERSION = "1.0";
 const char* firmwareURL = "https://github.com/sesha07-dotcom/Industrial_Controller/releases/download/v1.0/firmware.bin";
+const char* versionURL = "https://raw.githubusercontent.com/sesha07-dotcom/Industrial_Controller/main/version.txt";
+
+String fetchVersion() {
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  http.begin(client, versionURL);
+  int code = http.GET();
+  String ver;
+  if (code == 200) ver = http.getString();
+  http.end();
+  ver.trim();
+  return ver;
+}
 
 void checkForUpdate() {
   Serial.print("Connecting to WiFi");
@@ -19,63 +34,41 @@ void checkForUpdate() {
   }
   Serial.println("\nWiFi connected");
 
-  int code = 0;
-  String url = firmwareURL;
-
-  WiFiClientSecure client;
-  client.setInsecure();
-
-  HTTPClient http;
-  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.begin(client, url);
-
-  code = http.GET();
-
-  if (code == 302) {
-    url = http.getLocation();
-    http.end();
-    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-    http.begin(client, url);
-    code = http.GET();
+  String latestVersion = fetchVersion();
+  if (latestVersion.length() == 0) {
+    Serial.println("No version.txt — skipping OTA");
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    return;
   }
 
-  if (code == 200) {
-    int total = http.getSize();
-    Serial.printf("Firmware: %d bytes\n", total);
+  Serial.printf("Current: %s, Latest: %s\n", VERSION, latestVersion.c_str());
 
-    if (!Update.begin(total)) {
-      Serial.printf("Update.begin failed: %s\n", Update.errorString());
-      http.end();
-      WiFi.disconnect(true);
-      WiFi.mode(WIFI_OFF);
-      return;
-    }
+  if (latestVersion != VERSION) {
+    Serial.println("New firmware available — downloading...");
 
-    WiFiClient* stream = http.getStreamPtr();
-    uint8_t buf[1024];
-    size_t written = 0;
-    unsigned long t = millis();
+    esp_http_client_config_t cfg = {};
+    cfg.url = firmwareURL;
+    cfg.skip_cert_common_name_check = true;
+    cfg.max_redirection_count = 5;
+    cfg.timeout_ms = 30000;
+    cfg.keep_alive_enable = false;
 
-    while (written < (size_t)total && millis() - t < 60000) {
-      int n = stream->read(buf, 1024);
-      if (n > 0) {
-        Update.write(buf, n);
-        written += n;
-        t = millis();
-      }
-    }
+    esp_https_ota_config_t ota = {};
+    ota.http_config = &cfg;
+    ota.bulk_size = 65536;
 
-    if (written == (size_t)total && Update.end()) {
+    esp_err_t ret = esp_https_ota(&ota);
+    if (ret == ESP_OK) {
       Serial.println("Update success. Rebooting...");
-      ESP.restart();
+      esp_restart();
     } else {
-      Serial.printf("OTA fail: %d/%d, %s\n", written, total, Update.errorString());
+      Serial.printf("OTA failed: %s\n", esp_err_to_name(ret));
     }
   } else {
-    Serial.printf("HTTP error: %d\n", code);
+    Serial.println("Already up to date");
   }
 
-  http.end();
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 }
