@@ -8,7 +8,7 @@
 
 const char* ssid = "RTUniverse";
 const char* password = "8754820702";
-const char* firmwareURL = "https://github.com/YOUR_USER/Indstrial_Controller/releases/download/v1.0/Indstrial_Controller.ino.bin"; 
+const char* firmwareURL = "https://github.com/sesha07-dotcom/Industrial_Controller/releases/download/v1.0/firmware.bin"; 
 
 void checkForUpdate() {
   Serial.print("Connecting to WiFi");
