@@ -33,23 +33,40 @@ void setup() {
 }
 
 void loop() {
-  if (digitalRead(doorSensor) == LOW) {
+  int sensor = digitalRead(doorSensor);
+  static unsigned long lastPrint = 0;
+  if (millis() - lastPrint > 2000) {
+    lastPrint = millis();
+    Serial.print("Sensor: ");
+    Serial.print(sensor == LOW ? "LOW" : "HIGH");
+    Serial.print("  wasLow: ");
+    Serial.print(wasLow);
+    Serial.print("  lastState: ");
+    Serial.println(lastState);
+  }
+
+  if (sensor == LOW) {
     if (!wasLow) {
       wasLow = true;
       lowStartTime = millis();
+      Serial.println("Sensor went LOW - timer started");
     }
 
     unsigned long t = millis() - lowStartTime;
 
     if (t >= 60000 && lastState != 2) {
       lastState = 2;
-      setRelays(21, 23);  // 21 ON, 23 ON
+      Serial.println("60s reached: 21+23 ON");
+      setRelays(21, 23);
     } else if (t >= 30000 && lastState != 1) {
       lastState = 1;
-      setRelays(22, -1);  // 22 ON
+      Serial.println("30s reached: 22 ON");
+      setRelays(22, -1);
     }
   } else if (wasLow) {
     wasLow = false;
+    lowStartTime = 0;
+    Serial.println("Sensor went HIGH - reset to normal");
     setNormalState();
   }
 }

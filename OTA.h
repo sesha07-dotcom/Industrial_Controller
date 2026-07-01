@@ -8,7 +8,7 @@
 
 const char* ssid = "RTUniverse";
 const char* password = "8754820702";
-const char* firmwareURL = "https://github.com/sesha07-dotcom/Industrial_Controller/releases/download/v1.0/firmware.bin"; 
+const char* firmwareURL = "https://github.com/sesha07-dotcom/Industrial_Controller/releases/download/v1.0/firmware.bin";
 
 void checkForUpdate() {
   Serial.print("Connecting to WiFi");
@@ -20,9 +20,10 @@ void checkForUpdate() {
   Serial.println("\nWiFi connected");
 
   WiFiClientSecure client;
-  client.setInsecure(); // skip cert verification for simplicity
+  client.setInsecure();
 
   HTTPClient http;
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.begin(client, firmwareURL);
   int code = http.GET();
 
