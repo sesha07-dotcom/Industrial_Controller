@@ -1,0 +1,10 @@
+{
+  "additionalFiles": "../..",
+  "builtInLibrariesFolders": "/home/sesha/.arduino15/libraries",
+  "compiler.optimization_flags": "-Os",
+  "customBuildProperties": "",
+  "fqbn": "esp32:esp32:esp32doit-devkit-v1:UploadSpeed=460800,FlashFreq=80,DebugLevel=none,EraseFlash=none",
+  "hardwareFolders": "/home/sesha/.arduino15/packages/esp32/hardware/esp32/3.3.10,/home/sesha/.arduino15/packages/esp32/hardware/esp32/3.3.10",
+  "otherLibrariesFolders": "/home/sesha/Arduino/libraries",
+  "sketchLocation": "/home/sesha/Arduino/Indstrial_Controller"
+}
