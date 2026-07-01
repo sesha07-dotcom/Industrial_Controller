@@ -24,15 +24,19 @@ void setNormalState() {
 }
 
 void setup() {
+  // Set relays OFF immediately (prevents boot-time chatter)
+  for (int i = 0; i < relaycount; i++) {
+    pinMode(relays[i], OUTPUT);
+    digitalWrite(relays[i], HIGH);
+  }
+
   Serial.begin(115200);
   pinMode(doorSensor, INPUT_PULLDOWN);
 
   checkForUpdate();
 
-  for (int i = 0; i < relaycount; i++)
-    pinMode(relays[i], OUTPUT);
-
   setNormalState();
+  Serial.println("Ready");
 }
 
 void loop() {
@@ -51,20 +55,24 @@ void loop() {
     if (!wasTriggered) {
       wasTriggered = true;
       trigStartTime = millis();
+      Serial.println("Door closed - timer started");
     }
 
     unsigned long t = millis() - trigStartTime;
 
     if (t >= 60000 && lastState != 2) {
       lastState = 2;
+      Serial.println("60s: 21+23 ON");
       setRelays(21, 23);
     } else if (t >= 30000 && lastState != 1) {
       lastState = 1;
+      Serial.println("30s: 22 ON");
       setRelays(22, -1);
     }
   } else if (wasTriggered) {
     wasTriggered = false;
     trigStartTime = 0;
+    Serial.println("Door open - reset");
     setNormalState();
   }
 }
