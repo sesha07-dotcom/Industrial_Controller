@@ -51,12 +51,12 @@ void checkForUpdate() {
     cfg.url = firmwareURL;
     cfg.skip_cert_common_name_check = true;
     cfg.max_redirection_count = 5;
-    cfg.timeout_ms = 30000;
+    cfg.timeout_ms = 10000;
     cfg.keep_alive_enable = false;
 
     esp_https_ota_config_t ota = {};
     ota.http_config = &cfg;
-    ota.bulk_size = 65536;
+    ota.bulk_flash_erase = true;
 
     esp_err_t ret = esp_https_ota(&ota);
     if (ret == ESP_OK) {
