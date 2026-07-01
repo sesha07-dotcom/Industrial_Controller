@@ -8,7 +8,7 @@
 
 const char* ssid = "RTUniverse";
 const char* password = "8754820702";
-const char* firmwareURL = "https://raw.githubusercontent.com/sesha07-dotcom/Industrial_Controller/main/firmware.bin";
+const char* firmwareURL = "https://github.com/sesha07-dotcom/Industrial_Controller/releases/download/v1.0/firmware.bin";
 
 void checkForUpdate() {
   Serial.print("Connecting to WiFi");
@@ -19,31 +19,65 @@ void checkForUpdate() {
   }
   Serial.println("\nWiFi connected");
 
-  WiFiClientSecure client;
-  client.setInsecure();
+  int code = 0;
+  String url = firmwareURL;
 
-  HTTPClient http;
-  http.begin(client, firmwareURL);
-  int code = http.GET();
+  for (int attempt = 0; attempt < 3; attempt++) {
+    WiFiClientSecure client;
+    client.setInsecure();
 
-  if (code == 200) {
-    int total = http.getSize();
-    WiFiClient* stream = http.getStreamPtr();
+    HTTPClient http;
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+    http.begin(client, url);
 
-    if (Update.begin(total)) {
-      size_t written = Update.writeStream(*stream);
-      if (written == total && Update.end()) {
+    code = http.GET();
+
+    if (code == 302) {
+      String newUrl = http.getLocation();
+      http.end();
+      url = newUrl;
+      continue;
+    }
+
+    if (code == 200) {
+      int total = http.getSize();
+      Serial.printf("Firmware: %d bytes\n", total);
+
+      if (!Update.begin(total)) {
+        Serial.printf("Update.begin failed: %s\n", Update.errorString());
+        http.end();
+        break;
+      }
+
+      WiFiClient* stream = http.getStreamPtr();
+      uint8_t buf[1024];
+      size_t written = 0;
+      unsigned long t = millis();
+
+      while (written < (size_t)total && millis() - t < 60000) {
+        int n = stream->read(buf, 1024);
+        if (n > 0) {
+          Update.write(buf, n);
+          written += n;
+          t = millis();
+        }
+      }
+
+      if (written == (size_t)total && Update.end()) {
         Serial.println("Update success. Rebooting...");
         ESP.restart();
       } else {
-        Serial.printf("Update failed: %s\n", Update.errorString());
+        Serial.printf("OTA fail: %d/%d, %s\n", written, total, Update.errorString());
       }
+
+      http.end();
+      break;
     }
-  } else {
-    Serial.printf("HTTP error: %d\n", code);
+
+    http.end();
+    break;
   }
 
-  http.end();
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 }

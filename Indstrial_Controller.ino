@@ -4,9 +4,12 @@ const int relays[] = {23, 22, 21, 19, 18, 5};
 const int relaycount = 6;
 const int doorSensor = 4;
 
-unsigned long lowStartTime = 0;
-bool wasLow = false;
+unsigned long trigStartTime = 0;
+bool wasTriggered = false;
 int lastState = 0;
+int lastReading = LOW;
+unsigned long lastChangeTime = 0;
+const int debounceMs = 50;
 
 void setRelays(int lo1, int lo2) {
   for (int i = 0; i < relaycount; i++) {
@@ -22,7 +25,7 @@ void setNormalState() {
 
 void setup() {
   Serial.begin(115200);
-  pinMode(doorSensor, INPUT_PULLUP);
+  pinMode(doorSensor, INPUT_PULLDOWN);
 
   checkForUpdate();
 
@@ -33,40 +36,50 @@ void setup() {
 }
 
 void loop() {
-  int sensor = digitalRead(doorSensor);
+  int reading = digitalRead(doorSensor);
+
+  if (reading != lastReading)
+    lastChangeTime = millis();
+  lastReading = reading;
+
+  if (millis() - lastChangeTime < debounceMs)
+    return;
+
+  int sensor = reading;
+
   static unsigned long lastPrint = 0;
   if (millis() - lastPrint > 2000) {
     lastPrint = millis();
     Serial.print("Sensor: ");
     Serial.print(sensor == LOW ? "LOW" : "HIGH");
-    Serial.print("  wasLow: ");
-    Serial.print(wasLow);
-    Serial.print("  lastState: ");
+    Serial.print("  trig: ");
+    Serial.print(wasTriggered);
+    Serial.print("  state: ");
     Serial.println(lastState);
   }
 
-  if (sensor == LOW) {
-    if (!wasLow) {
-      wasLow = true;
-      lowStartTime = millis();
-      Serial.println("Sensor went LOW - timer started");
+  if (sensor == HIGH) {
+    if (!wasTriggered) {
+      wasTriggered = true;
+      trigStartTime = millis();
+      Serial.println("Triggered (HIGH) - timer started");
     }
 
-    unsigned long t = millis() - lowStartTime;
+    unsigned long t = millis() - trigStartTime;
 
     if (t >= 60000 && lastState != 2) {
       lastState = 2;
-      Serial.println("60s reached: 21+23 ON");
+      Serial.println("60s: 21+23 ON");
       setRelays(21, 23);
     } else if (t >= 30000 && lastState != 1) {
       lastState = 1;
-      Serial.println("30s reached: 22 ON");
+      Serial.println("30s: 22 ON");
       setRelays(22, -1);
     }
-  } else if (wasLow) {
-    wasLow = false;
-    lowStartTime = 0;
-    Serial.println("Sensor went HIGH - reset to normal");
+  } else if (wasTriggered) {
+    wasTriggered = false;
+    trigStartTime = 0;
+    Serial.println("Untriggered (LOW) - reset");
     setNormalState();
   }
 }
