@@ -5,6 +5,7 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <esp_https_ota.h>
+#include <esp_crt_bundle.h>
 
 const char* ssid = "RTUniverse";
 const char* password = "8754820702";
@@ -49,6 +50,7 @@ void checkForUpdate() {
 
     esp_http_client_config_t cfg = {};
     cfg.url = firmwareURL;
+    cfg.crt_bundle_attach = esp_crt_bundle_attach;
     cfg.skip_cert_common_name_check = true;
     cfg.max_redirection_count = 5;
     cfg.timeout_ms = 60000;
