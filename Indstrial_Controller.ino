@@ -64,7 +64,7 @@ void loop() {
       lastState = 2;
       Serial.println("60s: 21+23 ON");
       setRelays(21, 23);
-    } else if (t >= 30000 && lastState != 1) {
+    } else if (t >= 30000 && lastState == 0) {
       lastState = 1;
       Serial.println("30s: 22 ON");
       setRelays(22, -1);

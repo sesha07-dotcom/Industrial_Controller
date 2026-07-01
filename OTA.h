@@ -8,8 +8,8 @@
 
 const char* ssid = "RTUniverse";
 const char* password = "8754820702";
-const char* VERSION = "1.0";
-const char* firmwareURL = "https://github.com/sesha07-dotcom/Industrial_Controller/releases/download/v1.0/firmware.bin";
+const char* VERSION = "1.1";
+const char* firmwareURL = "https://raw.githubusercontent.com/sesha07-dotcom/Industrial_Controller/main/firmware.bin";
 const char* versionURL = "https://raw.githubusercontent.com/sesha07-dotcom/Industrial_Controller/main/version.txt";
 
 String fetchVersion() {
@@ -51,7 +51,7 @@ void checkForUpdate() {
     cfg.url = firmwareURL;
     cfg.skip_cert_common_name_check = true;
     cfg.max_redirection_count = 5;
-    cfg.timeout_ms = 10000;
+    cfg.timeout_ms = 60000;
     cfg.keep_alive_enable = false;
 
     esp_https_ota_config_t ota = {};
