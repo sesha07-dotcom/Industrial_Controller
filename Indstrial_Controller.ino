@@ -47,39 +47,24 @@ void loop() {
 
   int sensor = reading;
 
-  static unsigned long lastPrint = 0;
-  if (millis() - lastPrint > 2000) {
-    lastPrint = millis();
-    Serial.print("Sensor: ");
-    Serial.print(sensor == LOW ? "LOW" : "HIGH");
-    Serial.print("  trig: ");
-    Serial.print(wasTriggered);
-    Serial.print("  state: ");
-    Serial.println(lastState);
-  }
-
   if (sensor == HIGH) {
     if (!wasTriggered) {
       wasTriggered = true;
       trigStartTime = millis();
-      Serial.println("Triggered (HIGH) - timer started");
     }
 
     unsigned long t = millis() - trigStartTime;
 
     if (t >= 60000 && lastState != 2) {
       lastState = 2;
-      Serial.println("60s: 21+23 ON");
       setRelays(21, 23);
     } else if (t >= 30000 && lastState != 1) {
       lastState = 1;
-      Serial.println("30s: 22 ON");
       setRelays(22, -1);
     }
   } else if (wasTriggered) {
     wasTriggered = false;
     trigStartTime = 0;
-    Serial.println("Untriggered (LOW) - reset");
     setNormalState();
   }
 }

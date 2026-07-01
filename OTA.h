@@ -22,62 +22,60 @@ void checkForUpdate() {
   int code = 0;
   String url = firmwareURL;
 
-  for (int attempt = 0; attempt < 3; attempt++) {
-    WiFiClientSecure client;
-    client.setInsecure();
+  WiFiClientSecure client;
+  client.setInsecure();
 
-    HTTPClient http;
+  HTTPClient http;
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  http.begin(client, url);
+
+  code = http.GET();
+
+  if (code == 302) {
+    url = http.getLocation();
+    http.end();
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
     http.begin(client, url);
-
     code = http.GET();
-
-    if (code == 302) {
-      String newUrl = http.getLocation();
-      http.end();
-      url = newUrl;
-      continue;
-    }
-
-    if (code == 200) {
-      int total = http.getSize();
-      Serial.printf("Firmware: %d bytes\n", total);
-
-      if (!Update.begin(total)) {
-        Serial.printf("Update.begin failed: %s\n", Update.errorString());
-        http.end();
-        break;
-      }
-
-      WiFiClient* stream = http.getStreamPtr();
-      uint8_t buf[1024];
-      size_t written = 0;
-      unsigned long t = millis();
-
-      while (written < (size_t)total && millis() - t < 60000) {
-        int n = stream->read(buf, 1024);
-        if (n > 0) {
-          Update.write(buf, n);
-          written += n;
-          t = millis();
-        }
-      }
-
-      if (written == (size_t)total && Update.end()) {
-        Serial.println("Update success. Rebooting...");
-        ESP.restart();
-      } else {
-        Serial.printf("OTA fail: %d/%d, %s\n", written, total, Update.errorString());
-      }
-
-      http.end();
-      break;
-    }
-
-    http.end();
-    break;
   }
 
+  if (code == 200) {
+    int total = http.getSize();
+    Serial.printf("Firmware: %d bytes\n", total);
+
+    if (!Update.begin(total)) {
+      Serial.printf("Update.begin failed: %s\n", Update.errorString());
+      http.end();
+      WiFi.disconnect(true);
+      WiFi.mode(WIFI_OFF);
+      return;
+    }
+
+    WiFiClient* stream = http.getStreamPtr();
+    uint8_t buf[1024];
+    size_t written = 0;
+    unsigned long t = millis();
+
+    while (written < (size_t)total && millis() - t < 60000) {
+      int n = stream->read(buf, 1024);
+      if (n > 0) {
+        Update.write(buf, n);
+        written += n;
+        t = millis();
+      }
+    }
+
+    if (written == (size_t)total && Update.end()) {
+      Serial.println("Update success. Rebooting...");
+      ESP.restart();
+    } else {
+      Serial.printf("OTA fail: %d/%d, %s\n", written, total, Update.errorString());
+    }
+  } else {
+    Serial.printf("HTTP error: %d\n", code);
+  }
+
+  http.end();
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 }
